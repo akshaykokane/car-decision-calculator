@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cashflow & Risk Car Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --background: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #22c55e;
+            --chart-expense: #94a3b8;
+            --chart-saving: #38bdf8;
+            --chart-emi: #f43f5e;
+            --chart-buffer: #4ade80;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--background);
+            color: var(--text-main);
+            line-height: 1.5;
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border);
+            height: fit-content;
+        }
+
+        h2 { margin-top: 0; font-size: 1.25rem; margin-bottom: 1.5rem; }
+        
+        .form-group { margin-bottom: 1.25rem; }
+        
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .help-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        input[type="range"] { padding: 0; }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        button {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.875rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        button:hover { background-color: #1d4ed8; }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .charts-container { grid-template-columns: 1fr; }
+        }
+
+        .chart-wrapper {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .car-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .car-title {
+            font-size: 1.125rem;
+            font-weight: bold;
+            margin: 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+
+        .metric-value { font-weight: bold; }
+        
+        .highlight {
+            font-size: 1.1rem;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .badge {
+            font-size: 0.85rem;
+            font-weight: bold;
+            padding: 0.5rem;
+            border-radius: 4px;
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        .badge.safe { background: #f0fdf4; color: var(--success); }
+        .badge.warning { background: #fffbeb; color: var(--warning); }
+        .badge.danger { background: #fef2f2; color: var(--danger); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="panel">
+            <h2>Financial Profile</h2>
+            
+            <div class="form-group">
+                <label>1. Monthly Take-Home Pay (£)</label>
+                <input type="number" id="income" value="3500">
+            </div>
+
+            <div class="form-group">
+                <label>2. Monthly Savings Contribution (£)</label>
+                <span class="help-text">Amount you strictly want to save each month</span>
+                <input type="number" id="savings" value="500">
+            </div>
+
+            <div class="form-group">
+                <label>3. Monthly Expenses (£)</label>
+                <span class="help-text">Rent, groceries, utilities (excluding car)</span>
+                <input type="number" id="expenses" value="1800">
+            </div>
+
+            <div class="form-group">
+                <label>4. Risk Score (1-5)</label>
+                <span class="help-text">1 = Keep max buffer. 5 = Willing to max out budget.</span>
+                <input type="range" id="risk" min="1" max="5" value="3" step="1" oninput="document.getElementById('riskVal').innerText = this.value">
+                <div class="slider-labels">
+                    <span>1 (Conservative)</span>
+                    <span id="riskVal" style="font-weight:bold; color:var(--primary); font-size:1rem;">3</span>
+                    <span>5 (Aggressive)</span>
+                </div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 1.5rem 0;">
+
+            <div class="form-group">
+                <label>Loan Term (Months)</label>
+                <select id="term">
+                    <option value="36">36 Months (3 Years)</option>
+                    <option value="48">48 Months (4 Years)</option>
+                    <option value="60" selected>60 Months (5 Years)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Down Payment (£)</label>
+                <input type="number" id="downpayment" value="3000">
+            </div>
+
+            <button onclick="calculate()">Update Analysis</button>
+        </div>
+
+        <div>
+            <div class="charts-container">
+                <div class="chart-wrapper">
+                    <canvas id="cashflowChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="costChart"></canvas>
+                </div>
+            </div>
+
+            <div id="results" class="results-grid">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        const cars = [
+            { name: 'New Toyota', price: 33000, type: 'split', apr1: 0, apr1_months: 24, apr2: 4.5 },
+            { name: 'Used Toyota', price: 25000, type: 'standard', apr: 9.5 },
+            { name: 'New Honda', price: 35000, type: 'standard', apr: 2.9 },
+            { name: 'Used Honda', price: 25000, type: 'standard', apr: 9.5 }
+        ];
+
+        let cashflowChartInstance = null;
+        let costChartInstance = null;
+
+        function calculateStandardEMI(principal, annualApr, months) {
+            if (principal <= 0) return { emi: 0, totalInterest: 0 };
+            let r = annualApr / 100 / 12;
+            let emi = principal * (r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+            let totalInterest = (emi * months) - principal;
+            return { emi, totalInterest };
+        }
+
+        function calculateSplitEMI(principal, apr1, months1, apr2, totalMonths) {
+            if (principal <= 0) return { emi: 0, totalInterest: 0 };
+            let avgPrincipalPerMonth = principal / totalMonths;
+            let principalAfterPeriod1 = principal - (avgPrincipalPerMonth * months1);
+            let remainingMonths = totalMonths - months1;
+            let secondPart = calculateStandardEMI(principalAfterPeriod1, apr2, remainingMonths);
+            let totalInterest = secondPart.totalInterest;
+            let avgEmi = (principal + totalInterest) / totalMonths;
+            return { emi: avgEmi, totalInterest };
+        }
+
+        function formatCurrency(num) {
+            return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(num);
+        }
+
+        function calculate() {
+            const income = parseFloat(document.getElementById('income').value) || 0;
+            const savings = parseFloat(document.getElementById('savings').value) || 0;
+            const expenses = parseFloat(document.getElementById('expenses').value) || 0;
+            const risk = parseInt(document.getElementById('risk').value);
+            const downpayment = parseFloat(document.getElementById('downpayment').value) || 0;
+            const term = parseInt(document.getElementById('term').value);
+
+            const discretionaryFunds = income - expenses - savings;
+            // Risk 1 = 20% of discretionary, Risk 5 = 100% of discretionary
+            const riskMultiplier = risk * 0.20; 
+            const maxAllowedEMI = discretionaryFunds * riskMultiplier;
+
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.innerHTML = ''; 
+
+            let chartLabels = [];
+            let chartEmiData = [];
+            let chartBufferData = [];
+            let chartPrincipalData = [];
+            let chartInterestData = [];
+
+            cars.forEach(car => {
+                const loanAmount = Math.max(0, car.price - downpayment);
+                let loanData;
+
+                if (car.type === 'standard') {
+                    loanData = calculateStandardEMI(loanAmount, car.apr, term);
+                } else {
+                    loanData = calculateSplitEMI(loanAmount, car.apr1, car.apr1_months, car.apr2, term);
+                }
+
+                const emi = loanData.emi;
+                const totalInterest = loanData.totalInterest;
+                const remainingBuffer = discretionaryFunds - emi;
+
+                // Data for charts
+                chartLabels.push(car.name);
+                chartEmiData.push(emi);
+                chartBufferData.push(Math.max(0, remainingBuffer));
+                chartPrincipalData.push(loanAmount);
+                chartInterestData.push(totalInterest);
+
+                // Risk Evaluation
+                let riskBadge = '';
+                if (emi > discretionaryFunds) {
+                    riskBadge = '<div class="badge danger">Critical: Exceeds total available budget!</div>';
+                } else if (emi > maxAllowedEMI) {
+                    riskBadge = '<div class="badge warning">Warning: Exceeds your Risk Tolerance level</div>';
+                } else {
+                    riskBadge = '<div class="badge safe">Safe: Within your Risk Tolerance</div>';
+                }
+
+                resultsContainer.innerHTML += `
+                    <div class="car-card">
+                        <h3 class="car-title">${car.name}</h3>
+                        <div class="metric"><span>Price:</span> <span class="metric-value">${formatCurrency(car.price)}</span></div>
+                        <div class="metric highlight"><span>Est. Monthly:</span> <span>${formatCurrency(emi)}/mo</span></div>
+                        <div class="metric"><span>Interest Paid:</span> <span class="metric-value">${formatCurrency(totalInterest)}</span></div>
+                        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0.5rem 0;">
+                        <div class="metric"><span>Leftover Buffer:</span> <span class="metric-value">${formatCurrency(remainingBuffer)}/mo</span></div>
+                        ${riskBadge}
+                    </div>
+                `;
+            });
+
+            updateCharts(chartLabels, expenses, savings, chartEmiData, chartBufferData, chartPrincipalData, chartInterestData, income);
+        }
+
+        function updateCharts(labels, expenses, savings, emiData, bufferData, principalData, interestData, income) {
+            const ctxCashflow = document.getElementById('cashflowChart').getContext('2d');
+            const ctxCost = document.getElementById('costChart').getContext('2d');
+
+            if (cashflowChartInstance) cashflowChartInstance.destroy();
+            if (costChartInstance) costChartInstance.destroy();
+
+            // 1. Cashflow Chart
+            cashflowChartInstance = new Chart(ctxCashflow, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Expenses', data: labels.map(() => expenses), backgroundColor: '#94a3b8' },
+                        { label: 'Savings', data: labels.map(() => savings), backgroundColor: '#38bdf8' },
+                        { label: 'Car Payment', data: emiData, backgroundColor: '#f43f5e' },
+                        { label: 'Leftover Buffer', data: bufferData, backgroundColor: '#4ade80' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { title: { display: true, text: 'Monthly Cashflow Breakdown' }, tooltip: { mode: 'index', intersect: false } },
+                    scales: { x: { stacked: true }, y: { stacked: true, max: income } }
+                }
+            });
+
+            // 2. Total Cost Chart
+            costChartInstance = new Chart(ctxCost, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Principal (Loan Amt)', data: principalData, backgroundColor: '#60a5fa' },
+                        { label: 'Total Interest', data: interestData, backgroundColor: '#fbbf24' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { title: { display: true, text: 'Total Loan Cost (Principal + Interest)' }, tooltip: { mode: 'index', intersect: false } },
+                    scales: { x: { stacked: true }, y: { stacked: true } }
+                }
+            });
+        }
+
+        window.onload = calculate;
+    </script>
+</body>
+</html>
