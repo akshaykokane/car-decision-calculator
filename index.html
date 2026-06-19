@@ -528,6 +528,7 @@
             div.innerHTML = `
                 <div class="car-item-color" style="background:${car.color}"></div>
                 <span class="car-item-name">${car.name}</span>
+                ${car.isNew ? '<span class="new-car-badge">NEW</span>' : ''}
                 <span class="car-item-price">£${car.price.toLocaleString()}</span>
                 <div class="car-item-actions">
                     <button class="btn btn-secondary btn-sm" onclick="openModal(${car.id})">Edit</button>
@@ -753,7 +754,17 @@
     }
 
     // ── Decision Banner ──────────────────────────────────────────────────────
-    function renderBanner(results, discretionary, maxEMI) {
+    function pickWinner(affordable, preferNew) {
+        if (affordable.length === 0) return null;
+        // Sort by total cost ascending
+        const byCost = [...affordable].sort((a, b) => a.loan.totalCost - b.loan.totalCost);
+        if (!preferNew) return byCost[0];
+        // If prefer new: pick lowest-cost new car, fall back to overall lowest cost
+        const newOnly = byCost.filter(r => r.car.isNew);
+        return newOnly.length > 0 ? newOnly[0] : byCost[0];
+    }
+
+    function renderBanner(results, discretionary, maxEMI, preferNew) {
         const banner = document.getElementById('decisionBanner');
         const affordable = results.filter(r => !r.over && r.affordable);
         const tight = results.filter(r => !r.over && !r.affordable);
@@ -768,14 +779,28 @@
         } else if (affordable.length === 0) {
             icon = '⚠️'; cls = 'warning';
             title = 'All options exceed your risk tolerance — but some are technically payable';
-            const best = tight.sort((a,b) => a.loan.emi - b.loan.emi)[0];
+            const best = [...tight].sort((a,b) => a.loan.emi - b.loan.emi)[0];
             body = `The cheapest monthly payment is <strong>${fmt(best.loan.emi)}/mo</strong> for <strong>${best.car.name}</strong>. Increase your risk tolerance or down payment to unlock safer options.`;
         } else {
-            const winner = affordable.sort((a,b) => a.loan.totalCost - b.loan.totalCost)[0];
-            const lowestEmi = affordable.sort((a,b) => a.loan.emi - b.loan.emi)[0];
+            const winner = pickWinner(affordable, preferNew);
+            const lowestEmi = [...affordable].sort((a,b) => a.loan.emi - b.loan.emi)[0];
+            const bestValueOverall = [...affordable].sort((a,b) => a.loan.totalCost - b.loan.totalCost)[0];
+
             icon = '✅'; cls = 'best';
-            title = `Best value pick: ${winner.car.name}`;
-            body = `Lowest total cost of <strong>${fmt(winner.loan.totalCost)}</strong> and within your risk tolerance at <strong>${fmt(winner.loan.emi)}/mo</strong>.`;
+            title = `Recommended pick: ${winner.car.name}`;
+
+            if (preferNew && winner.car.isNew) {
+                body = `Based on your <strong>new car preference</strong>, ${winner.car.name} offers the best total cost among new cars — <strong>${fmt(winner.loan.totalCost)}</strong> at <strong>${fmt(winner.loan.emi)}/mo</strong>.`;
+                if (bestValueOverall.car.id !== winner.car.id) {
+                    body += ` Note: <strong>${bestValueOverall.car.name}</strong> has a lower overall total cost (${fmt(bestValueOverall.loan.totalCost)}) but is not a new car.`;
+                }
+            } else if (preferNew && !winner.car.isNew) {
+                icon = '⚠️'; cls = 'warning';
+                body = `You prefer a new car, but <strong>no new cars are within your risk tolerance</strong>. The most affordable option is <strong>${winner.car.name}</strong> at <strong>${fmt(winner.loan.emi)}/mo</strong>. Try increasing your risk tolerance or down payment.`;
+            } else {
+                body = `Lowest total cost of <strong>${fmt(winner.loan.totalCost)}</strong> and within your risk tolerance at <strong>${fmt(winner.loan.emi)}/mo</strong>.`;
+            }
+
             if (lowestEmi.car.id !== winner.car.id) {
                 body += ` Lowest monthly payment is <strong>${lowestEmi.car.name}</strong> at <strong>${fmt(lowestEmi.loan.emi)}/mo</strong>.`;
             }
@@ -789,15 +814,13 @@
     }
 
     // ── Car Cards ────────────────────────────────────────────────────────────
-    function renderCards(results, discretionary, maxEMI, term) {
+    function renderCards(results, discretionary, maxEMI, term, preferNew) {
         const container = document.getElementById('results');
         container.innerHTML = '';
 
-        // Determine winner (lowest total cost among affordable)
         const affordable = results.filter(r => !r.over && r.affordable);
-        const winnerId = affordable.length > 0
-            ? affordable.sort((a,b) => a.loan.totalCost - b.loan.totalCost)[0].car.id
-            : null;
+        const winner = pickWinner(affordable, preferNew);
+        const winnerId = winner ? winner.car.id : null;
 
         results.forEach(({ car, dp, loanAmount, loan, buffer, affordable, over }) => {
             let statusClass = over ? 'over-budget' : !affordable ? 'tight' : 'affordable';
@@ -832,6 +855,7 @@
                 <div class="car-card-header">
                     <div class="car-color-dot" style="background:${car.color}"></div>
                     <span class="car-card-title">${car.name}</span>
+                    ${car.isNew ? '<span class="new-car-badge">NEW</span>' : ''}
                     <span class="winner-badge">BEST VALUE</span>
                 </div>
                 <div class="car-card-body">
