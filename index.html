@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cashflow & Risk Car Calculator</title>
+    <title>Car Decision Calculator</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary: #2563eb;
-            --background: #f8fafc;
+            --primary-light: #eff6ff;
+            --background: #f1f5f9;
             --card-bg: #ffffff;
             --text-main: #0f172a;
             --text-muted: #64748b;
@@ -16,74 +17,84 @@
             --danger: #ef4444;
             --warning: #f59e0b;
             --success: #22c55e;
-            --chart-expense: #94a3b8;
-            --chart-saving: #38bdf8;
-            --chart-emi: #f43f5e;
-            --chart-buffer: #4ade80;
         }
+
+        * { box-sizing: border-box; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--background);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--background);
             color: var(--text-main);
-            line-height: 1.5;
             margin: 0;
-            padding: 2rem;
+            padding: 1.5rem;
+            line-height: 1.5;
         }
 
-        .container {
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        header h1 { margin: 0; font-size: 1.75rem; }
+        header p { margin: 0.25rem 0 0; color: var(--text-muted); font-size: 0.95rem; }
+
+        .layout {
             max-width: 1400px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 2rem;
+            grid-template-columns: 360px 1fr;
+            gap: 1.5rem;
+            align-items: start;
         }
 
-        @media (max-width: 1024px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-        }
+        @media (max-width: 1024px) { .layout { grid-template-columns: 1fr; } }
 
         .panel {
             background: var(--card-bg);
+            border-radius: 14px;
             padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             border: 1px solid var(--border);
-            height: fit-content;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
 
-        h2 { margin-top: 0; font-size: 1.25rem; margin-bottom: 1.5rem; }
-        
-        .form-group { margin-bottom: 1.25rem; }
-        
-        label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
+        .panel h2 {
+            margin: 0 0 1.25rem;
+            font-size: 1.05rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .help-text {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-bottom: 0.25rem;
-            display: block;
+        .section-icon {
+            width: 28px; height: 28px;
+            border-radius: 8px;
+            background: var(--primary-light);
+            color: var(--primary);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem;
+            flex-shrink: 0;
         }
 
-        input, select {
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+        .help { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.3rem; display: block; }
+
+        input[type="number"], input[type="text"], select {
             width: 100%;
-            padding: 0.75rem;
+            padding: 0.6rem 0.75rem;
             border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 1rem;
-            box-sizing: border-box;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            background: #f8fafc;
+            transition: border-color 0.15s;
+        }
+        input:focus, select:focus { outline: none; border-color: var(--primary); background: white; }
+
+        input[type="range"] {
+            width: 100%; padding: 0; background: none; border: none; cursor: pointer;
         }
 
-        input[type="range"] { padding: 0; }
-
-        .slider-labels {
+        .slider-row {
             display: flex;
             justify-content: space-between;
             font-size: 0.75rem;
@@ -91,308 +102,823 @@
             margin-top: 0.25rem;
         }
 
-        button {
-            width: 100%;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.875rem;
-            border-radius: 6px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 1rem;
+        .divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+            padding: 0.65rem 1.1rem;
+            border: none; border-radius: 8px;
+            font-size: 0.9rem; font-weight: 600; cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
         }
+        .btn:hover { opacity: 0.88; }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: var(--primary); color: white; width: 100%; margin-top: 0.5rem; padding: 0.8rem; }
+        .btn-secondary { background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border); }
+        .btn-danger { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+        .btn-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .btn-sm { padding: 0.35rem 0.65rem; font-size: 0.8rem; }
 
-        button:hover { background-color: #1d4ed8; }
+        /* Car Manager */
+        .car-list { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem; }
 
-        .charts-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        @media (max-width: 768px) {
-            .charts-container { grid-template-columns: 1fr; }
-        }
-
-        .chart-wrapper {
-            background: var(--card-bg);
-            padding: 1rem;
-            border-radius: 12px;
+        .car-item {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.65rem 0.85rem;
             border: 1px solid var(--border);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
         }
+        .car-item:hover { background: var(--primary-light); border-color: var(--primary); }
+        .car-item.selected { background: var(--primary-light); border-color: var(--primary); }
 
-        .results-grid {
+        .car-item-color { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .car-item-name { font-size: 0.9rem; font-weight: 600; flex: 1; }
+        .car-item-price { font-size: 0.8rem; color: var(--text-muted); }
+        .car-item-actions { display: flex; gap: 0.35rem; }
+
+        .add-car-btn {
+            width: 100%; padding: 0.65rem;
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            background: none;
+            color: var(--text-muted);
+            font-size: 0.85rem; font-weight: 600;
+            cursor: pointer; text-align: center;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .add-car-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* Modal */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(15,23,42,0.4); backdrop-filter: blur(2px);
+            z-index: 100; align-items: center; justify-content: center; padding: 1rem;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: white; border-radius: 14px; padding: 1.75rem;
+            width: 100%; max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            max-height: 90vh; overflow-y: auto;
+        }
+        .modal h3 { margin: 0 0 1.25rem; font-size: 1.1rem; }
+        .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+        .modal-actions .btn { flex: 1; }
+
+        .loan-type-selector { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+        .loan-type-btn {
+            flex: 1; padding: 0.5rem; border-radius: 8px;
+            border: 1px solid var(--border); background: #f8fafc;
+            font-size: 0.8rem; font-weight: 600; cursor: pointer;
+            text-align: center; transition: all 0.15s;
+        }
+        .loan-type-btn.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+
+        .split-apr-fields { display: none; }
+        .split-apr-fields.show { display: block; }
+        .standard-apr-field { display: block; }
+        .standard-apr-field.hide { display: none; }
+
+        /* Right column */
+        .right-col { display: flex; flex-direction: column; gap: 1.5rem; }
+
+        /* Decision banner */
+        .decision-banner {
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
+            border: 1px solid;
+            display: flex; align-items: flex-start; gap: 1rem;
+        }
+        .decision-banner.best { background: #f0fdf4; border-color: #86efac; }
+        .decision-banner.warning { background: #fffbeb; border-color: #fcd34d; }
+        .decision-banner.danger { background: #fef2f2; border-color: #fca5a5; }
+        .decision-icon { font-size: 1.75rem; line-height: 1; flex-shrink: 0; }
+        .decision-text h3 { margin: 0 0 0.25rem; font-size: 1rem; }
+        .decision-text p { margin: 0; font-size: 0.875rem; color: var(--text-muted); }
+        .decision-text p strong { color: var(--text-main); }
+
+        /* Car result cards */
+        .cars-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+            gap: 1rem;
         }
 
         .car-card {
             background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
+            border-radius: 14px;
+            border: 2px solid var(--border);
+            overflow: hidden;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            position: relative;
         }
+        .car-card.winner { border-color: var(--success); box-shadow: 0 0 0 3px rgba(34,197,94,0.15); }
+        .car-card.affordable { border-color: var(--primary); }
+        .car-card.tight { border-color: var(--warning); }
+        .car-card.over-budget { border-color: var(--danger); }
 
-        .car-title {
-            font-size: 1.125rem;
-            font-weight: bold;
-            margin: 0;
-            padding-bottom: 0.5rem;
+        .car-card-header {
+            padding: 1rem 1.25rem 0.75rem;
+            display: flex; align-items: center; gap: 0.75rem;
             border-bottom: 1px solid var(--border);
         }
+        .car-color-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+        .car-card-title { font-size: 1rem; font-weight: 700; flex: 1; }
+        .winner-badge {
+            display: none; font-size: 0.7rem; font-weight: 700;
+            background: var(--success); color: white;
+            padding: 0.2rem 0.5rem; border-radius: 20px;
+        }
+        .car-card.winner .winner-badge { display: block; }
 
-        .metric {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
+        .car-card-body { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
+
+        .calc-section-label {
+            font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.05em; color: var(--text-muted);
+            margin: 0.5rem 0 0.25rem;
+        }
+        .calc-section-label:first-child { margin-top: 0; }
+
+        .metric-row {
+            display: flex; justify-content: space-between; align-items: baseline;
+            font-size: 0.875rem; padding: 0.15rem 0;
+        }
+        .metric-label { color: var(--text-muted); }
+        .metric-val { font-weight: 600; }
+        .metric-row.total { font-size: 0.95rem; border-top: 1px solid var(--border); padding-top: 0.5rem; margin-top: 0.25rem; }
+        .metric-row.emi-row .metric-val { color: var(--primary); font-size: 1.1rem; }
+
+        .status-pill {
+            margin-top: 0.75rem; padding: 0.5rem;
+            border-radius: 8px; text-align: center;
+            font-size: 0.82rem; font-weight: 700;
+        }
+        .pill-safe { background: #f0fdf4; color: #16a34a; }
+        .pill-tight { background: #fffbeb; color: #b45309; }
+        .pill-over { background: #fef2f2; color: #dc2626; }
+
+        /* Charts */
+        .charts-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+        }
+        @media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
+
+        .chart-card {
+            background: var(--card-bg); border-radius: 14px;
+            border: 1px solid var(--border); padding: 1rem 1.25rem;
         }
 
-        .metric-value { font-weight: bold; }
-        
-        .highlight {
-            font-size: 1.1rem;
-            color: var(--primary);
-            font-weight: bold;
+        .color-swatches { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+        .swatch {
+            display: inline-block; width: 18px; height: 18px;
+            border-radius: 4px; cursor: pointer; border: 2px solid transparent;
+            transition: border-color 0.15s, transform 0.15s;
+        }
+        .swatch:hover { transform: scale(1.2); }
+        .swatch.selected-swatch { border-color: #0f172a; }
+
+        .new-car-badge {
+            font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05em;
+            padding: 0.15rem 0.45rem; border-radius: 20px;
+            background: #fefce8; color: #854d0e; border: 1px solid #fde047;
+            flex-shrink: 0;
         }
 
-        .badge {
-            font-size: 0.85rem;
-            font-weight: bold;
-            padding: 0.5rem;
-            border-radius: 4px;
-            text-align: center;
-            margin-top: 0.5rem;
+        .pref-notice {
+            font-size: 0.78rem; color: #6d28d9;
+            background: #f5f3ff; border: 1px solid #ddd6fe;
+            border-radius: 8px; padding: 0.5rem 0.75rem;
+            margin-top: 0.5rem; display: none;
         }
+        .pref-notice.show { display: block; }
 
-        .badge.safe { background: #f0fdf4; color: var(--success); }
-        .badge.warning { background: #fffbeb; color: var(--warning); }
-        .badge.danger { background: #fef2f2; color: var(--danger); }
+        .checkbox-row {
+            display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.6rem 0.75rem;
+            border: 1px solid var(--border); border-radius: 8px;
+            background: #f8fafc; cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+            user-select: none;
+        }
+        .checkbox-row:hover { border-color: var(--primary); background: var(--primary-light); }
+        .checkbox-row input[type="checkbox"] {
+            width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;
+            accent-color: var(--primary);
+        }
+        .checkbox-row span { font-size: 0.875rem; font-weight: 600; }
+
+        .apr-badge {
+            display: inline-block; font-size: 0.7rem; font-weight: 700;
+            padding: 0.15rem 0.45rem; border-radius: 20px;
+            background: var(--primary-light); color: var(--primary);
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
 
-    <div class="container">
+<header>
+    <h1>Car Decision Calculator</h1>
+    <p>Compare loans, understand true cost, and choose the right car for your budget</p>
+</header>
+
+<div class="layout">
+    <!-- LEFT: Settings -->
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+
+        <!-- Financial Profile -->
         <div class="panel">
-            <h2>Financial Profile</h2>
-            
+            <h2><span class="section-icon">💰</span> Your Financial Profile</h2>
+
             <div class="form-group">
-                <label>1. Monthly Take-Home Pay (£)</label>
+                <label>Monthly Take-Home Pay (£)</label>
                 <input type="number" id="income" value="3500">
             </div>
-
             <div class="form-group">
-                <label>2. Monthly Savings Contribution (£)</label>
-                <span class="help-text">Amount you strictly want to save each month</span>
+                <label>Monthly Savings Goal (£)</label>
+                <span class="help">Amount you strictly want to save each month</span>
                 <input type="number" id="savings" value="500">
             </div>
-
             <div class="form-group">
-                <label>3. Monthly Expenses (£)</label>
-                <span class="help-text">Rent, groceries, utilities (excluding car)</span>
+                <label>Monthly Expenses (£)</label>
+                <span class="help">Rent, groceries, bills — excluding car</span>
                 <input type="number" id="expenses" value="1800">
             </div>
-
             <div class="form-group">
-                <label>4. Risk Score (1-5)</label>
-                <span class="help-text">1 = Keep max buffer. 5 = Willing to max out budget.</span>
-                <input type="range" id="risk" min="1" max="5" value="3" step="1" oninput="document.getElementById('riskVal').innerText = this.value">
-                <div class="slider-labels">
-                    <span>1 (Conservative)</span>
-                    <span id="riskVal" style="font-weight:bold; color:var(--primary); font-size:1rem;">3</span>
-                    <span>5 (Aggressive)</span>
+                <label>Risk Tolerance</label>
+                <span class="help">How much of your spare budget you're willing to use</span>
+                <input type="range" id="risk" min="1" max="5" value="3" step="1"
+                    oninput="document.getElementById('riskVal').textContent = this.value">
+                <div class="slider-row">
+                    <span>1 — Conservative</span>
+                    <span id="riskVal" style="font-weight:700; color:var(--primary);">3</span>
+                    <span>5 — Aggressive</span>
                 </div>
             </div>
 
-            <hr style="border: 0; border-top: 1px solid var(--border); margin: 1.5rem 0;">
+            <hr class="divider">
 
             <div class="form-group">
-                <label>Loan Term (Months)</label>
+                <label>Loan Term</label>
                 <select id="term">
-                    <option value="36">36 Months (3 Years)</option>
-                    <option value="48">48 Months (4 Years)</option>
-                    <option value="60" selected>60 Months (5 Years)</option>
+                    <option value="36">36 months (3 years)</option>
+                    <option value="48">48 months (4 years)</option>
+                    <option value="60" selected>60 months (5 years)</option>
+                    <option value="72">72 months (6 years)</option>
+                    <option value="84">84 months (7 years)</option>
                 </select>
             </div>
-
             <div class="form-group">
                 <label>Down Payment (£)</label>
                 <input type="number" id="downpayment" value="3000">
             </div>
 
-            <button onclick="calculate()">Update Analysis</button>
-        </div>
+            <hr class="divider">
 
-        <div>
-            <div class="charts-container">
-                <div class="chart-wrapper">
-                    <canvas id="cashflowChart"></canvas>
-                </div>
-                <div class="chart-wrapper">
-                    <canvas id="costChart"></canvas>
+            <div class="form-group">
+                <label>Preferences</label>
+                <label class="checkbox-row" for="preferNew">
+                    <input type="checkbox" id="preferNew" onchange="calculate()">
+                    <span>Prefer new cars</span>
+                </label>
+                <div class="pref-notice" id="prefNotice">
+                    New car preference is active — the recommendation will favour new cars among affordable options.
                 </div>
             </div>
 
-            <div id="results" class="results-grid">
-                </div>
+            <button class="btn btn-primary" onclick="calculate()">&#8635; Update Analysis</button>
+        </div>
+
+        <!-- Car Manager -->
+        <div class="panel">
+            <h2><span class="section-icon">🚗</span> Cars to Compare</h2>
+            <div class="car-list" id="carList"></div>
+            <button class="add-car-btn" onclick="openModal()">+ Add a Car</button>
         </div>
     </div>
 
-    <script>
-        const cars = [
-            { name: 'New Toyota', price: 33000, type: 'split', apr1: 0, apr1_months: 24, apr2: 4.5 },
-            { name: 'Used Toyota', price: 25000, type: 'standard', apr: 9.5 },
-            { name: 'New Honda', price: 35000, type: 'standard', apr: 2.9 },
-            { name: 'Used Honda', price: 25000, type: 'standard', apr: 9.5 }
-        ];
+    <!-- RIGHT: Results -->
+    <div class="right-col">
 
-        let cashflowChartInstance = null;
-        let costChartInstance = null;
+        <!-- Decision Banner -->
+        <div id="decisionBanner" class="decision-banner best">
+            <div class="decision-icon">&#8987;</div>
+            <div class="decision-text">
+                <h3>Run the analysis to see your recommendation</h3>
+                <p>Fill in your financial profile and click <strong>Update Analysis</strong>.</p>
+            </div>
+        </div>
 
-        function calculateStandardEMI(principal, annualApr, months) {
-            if (principal <= 0) return { emi: 0, totalInterest: 0 };
-            let r = annualApr / 100 / 12;
-            let emi = principal * (r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
-            let totalInterest = (emi * months) - principal;
-            return { emi, totalInterest };
-        }
+        <!-- Charts -->
+        <div class="charts-grid">
+            <div class="chart-card"><canvas id="cashflowChart"></canvas></div>
+            <div class="chart-card"><canvas id="costChart"></canvas></div>
+        </div>
 
-        function calculateSplitEMI(principal, apr1, months1, apr2, totalMonths) {
-            if (principal <= 0) return { emi: 0, totalInterest: 0 };
-            let avgPrincipalPerMonth = principal / totalMonths;
-            let principalAfterPeriod1 = principal - (avgPrincipalPerMonth * months1);
-            let remainingMonths = totalMonths - months1;
-            let secondPart = calculateStandardEMI(principalAfterPeriod1, apr2, remainingMonths);
-            let totalInterest = secondPart.totalInterest;
-            let avgEmi = (principal + totalInterest) / totalMonths;
-            return { emi: avgEmi, totalInterest };
-        }
+        <!-- Car cards -->
+        <div class="cars-grid" id="results"></div>
+    </div>
+</div>
 
-        function formatCurrency(num) {
-            return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(num);
-        }
+<!-- Add/Edit Car Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+    <div class="modal">
+        <h3 id="modalTitle">Add a Car</h3>
 
-        function calculate() {
-            const income = parseFloat(document.getElementById('income').value) || 0;
-            const savings = parseFloat(document.getElementById('savings').value) || 0;
-            const expenses = parseFloat(document.getElementById('expenses').value) || 0;
-            const risk = parseInt(document.getElementById('risk').value);
-            const downpayment = parseFloat(document.getElementById('downpayment').value) || 0;
-            const term = parseInt(document.getElementById('term').value);
+        <div class="form-group">
+            <label>Car Name</label>
+            <input type="text" id="carName" placeholder="e.g. New Toyota Corolla">
+        </div>
 
-            const discretionaryFunds = income - expenses - savings;
-            // Risk 1 = 20% of discretionary, Risk 5 = 100% of discretionary
-            const riskMultiplier = risk * 0.20; 
-            const maxAllowedEMI = discretionaryFunds * riskMultiplier;
+        <div class="form-group">
+            <label class="checkbox-row" for="carIsNew" style="margin:0;">
+                <input type="checkbox" id="carIsNew">
+                <span>This is a new car</span>
+            </label>
+        </div>
 
-            const resultsContainer = document.getElementById('results');
-            resultsContainer.innerHTML = ''; 
+        <div class="form-group">
+            <label>Colour</label>
+            <div class="color-swatches" id="colorSwatches"></div>
+        </div>
 
-            let chartLabels = [];
-            let chartEmiData = [];
-            let chartBufferData = [];
-            let chartPrincipalData = [];
-            let chartInterestData = [];
+        <div class="modal-row">
+            <div class="form-group">
+                <label>Total Car Price (£)</label>
+                <input type="number" id="carPrice" placeholder="25000">
+            </div>
+            <div class="form-group">
+                <label>Down Payment (£)</label>
+                <span class="help">Leave 0 to use global setting</span>
+                <input type="number" id="carDownPayment" placeholder="0" value="0">
+            </div>
+        </div>
 
-            cars.forEach(car => {
-                const loanAmount = Math.max(0, car.price - downpayment);
-                let loanData;
+        <div class="form-group">
+            <label>Loan Type</label>
+            <div class="loan-type-selector">
+                <div class="loan-type-btn active" id="btnStandard" onclick="setLoanType('standard')">Standard APR</div>
+                <div class="loan-type-btn" id="btnSplit" onclick="setLoanType('split')">Split APR (promo + standard)</div>
+            </div>
 
-                if (car.type === 'standard') {
-                    loanData = calculateStandardEMI(loanAmount, car.apr, term);
-                } else {
-                    loanData = calculateSplitEMI(loanAmount, car.apr1, car.apr1_months, car.apr2, term);
-                }
+            <div class="standard-apr-field" id="standardAprField">
+                <div class="form-group">
+                    <label>APR (%)</label>
+                    <input type="number" id="carApr" placeholder="9.5" step="0.1">
+                </div>
+            </div>
 
-                const emi = loanData.emi;
-                const totalInterest = loanData.totalInterest;
-                const remainingBuffer = discretionaryFunds - emi;
-
-                // Data for charts
-                chartLabels.push(car.name);
-                chartEmiData.push(emi);
-                chartBufferData.push(Math.max(0, remainingBuffer));
-                chartPrincipalData.push(loanAmount);
-                chartInterestData.push(totalInterest);
-
-                // Risk Evaluation
-                let riskBadge = '';
-                if (emi > discretionaryFunds) {
-                    riskBadge = '<div class="badge danger">Critical: Exceeds total available budget!</div>';
-                } else if (emi > maxAllowedEMI) {
-                    riskBadge = '<div class="badge warning">Warning: Exceeds your Risk Tolerance level</div>';
-                } else {
-                    riskBadge = '<div class="badge safe">Safe: Within your Risk Tolerance</div>';
-                }
-
-                resultsContainer.innerHTML += `
-                    <div class="car-card">
-                        <h3 class="car-title">${car.name}</h3>
-                        <div class="metric"><span>Price:</span> <span class="metric-value">${formatCurrency(car.price)}</span></div>
-                        <div class="metric highlight"><span>Est. Monthly:</span> <span>${formatCurrency(emi)}/mo</span></div>
-                        <div class="metric"><span>Interest Paid:</span> <span class="metric-value">${formatCurrency(totalInterest)}</span></div>
-                        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0.5rem 0;">
-                        <div class="metric"><span>Leftover Buffer:</span> <span class="metric-value">${formatCurrency(remainingBuffer)}/mo</span></div>
-                        ${riskBadge}
+            <div class="split-apr-fields" id="splitAprFields">
+                <div class="modal-row">
+                    <div class="form-group">
+                        <label>Promo APR (%)</label>
+                        <input type="number" id="carApr1" placeholder="0" step="0.1">
                     </div>
+                    <div class="form-group">
+                        <label>Promo Period (months)</label>
+                        <input type="number" id="carApr1Months" placeholder="24">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Standard APR after promo (%)</label>
+                    <input type="number" id="carApr2" placeholder="4.5" step="0.1">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Notes (optional)</label>
+            <input type="text" id="carNotes" placeholder="e.g. includes free servicing for 3 years">
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" style="margin:0;" onclick="saveCar()">Save Car</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const PALETTE = ['#2563eb','#16a34a','#dc2626','#9333ea','#ea580c','#0891b2','#be185d','#ca8a04','#475569','#0f766e'];
+
+    let cars = [
+        { id: 1, name: 'New Toyota', price: 33000, type: 'split', apr1: 0, apr1_months: 24, apr2: 4.5, color: PALETTE[0], notes: '', isNew: true },
+        { id: 2, name: 'Used Toyota', price: 25000, type: 'standard', apr: 9.5, color: PALETTE[1], notes: '', isNew: false },
+        { id: 3, name: 'New Honda', price: 35000, type: 'standard', apr: 2.9, color: PALETTE[2], notes: '', isNew: true },
+        { id: 4, name: 'Used Honda', price: 25000, type: 'standard', apr: 9.5, color: PALETTE[3], notes: '', isNew: false }
+    ];
+    let nextId = 5;
+    let editingId = null;
+    let selectedColor = PALETTE[0];
+
+    let cashflowChart = null, costChart = null;
+
+    // ── Car List UI ─────────────────────────────────────────────────────────
+    function renderCarList() {
+        const list = document.getElementById('carList');
+        list.innerHTML = '';
+        cars.forEach(car => {
+            const div = document.createElement('div');
+            div.className = 'car-item';
+            div.innerHTML = `
+                <div class="car-item-color" style="background:${car.color}"></div>
+                <span class="car-item-name">${car.name}</span>
+                <span class="car-item-price">£${car.price.toLocaleString()}</span>
+                <div class="car-item-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="openModal(${car.id})">Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteCar(${car.id})">Del</button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function deleteCar(id) {
+        if (cars.length <= 1) { alert('You need at least one car to compare.'); return; }
+        cars = cars.filter(c => c.id !== id);
+        renderCarList();
+        calculate();
+    }
+
+    // ── Modal ────────────────────────────────────────────────────────────────
+    function buildColorSwatches(picked) {
+        const container = document.getElementById('colorSwatches');
+        container.innerHTML = '';
+        PALETTE.forEach(hex => {
+            const s = document.createElement('span');
+            s.className = 'swatch' + (hex === picked ? ' selected-swatch' : '');
+            s.style.background = hex;
+            s.onclick = () => {
+                selectedColor = hex;
+                document.querySelectorAll('.swatch').forEach(el => el.classList.remove('selected-swatch'));
+                s.classList.add('selected-swatch');
+            };
+            container.appendChild(s);
+        });
+    }
+
+    let currentLoanType = 'standard';
+    function setLoanType(type) {
+        currentLoanType = type;
+        document.getElementById('btnStandard').classList.toggle('active', type === 'standard');
+        document.getElementById('btnSplit').classList.toggle('active', type === 'split');
+        document.getElementById('standardAprField').classList.toggle('hide', type === 'split');
+        document.getElementById('splitAprFields').classList.toggle('show', type === 'split');
+    }
+
+    function openModal(id) {
+        editingId = id || null;
+        document.getElementById('modalTitle').textContent = id ? 'Edit Car' : 'Add a Car';
+
+        if (id) {
+            const car = cars.find(c => c.id === id);
+            document.getElementById('carName').value = car.name;
+            document.getElementById('carIsNew').checked = car.isNew || false;
+            document.getElementById('carPrice').value = car.price;
+            document.getElementById('carDownPayment').value = car.downPayment || 0;
+            document.getElementById('carNotes').value = car.notes || '';
+            selectedColor = car.color;
+            setLoanType(car.type);
+            if (car.type === 'standard') {
+                document.getElementById('carApr').value = car.apr;
+            } else {
+                document.getElementById('carApr1').value = car.apr1;
+                document.getElementById('carApr1Months').value = car.apr1_months;
+                document.getElementById('carApr2').value = car.apr2;
+            }
+        } else {
+            document.getElementById('carName').value = '';
+            document.getElementById('carIsNew').checked = false;
+            document.getElementById('carPrice').value = '';
+            document.getElementById('carDownPayment').value = 0;
+            document.getElementById('carNotes').value = '';
+            document.getElementById('carApr').value = '';
+            document.getElementById('carApr1').value = '';
+            document.getElementById('carApr1Months').value = '';
+            document.getElementById('carApr2').value = '';
+            selectedColor = PALETTE.find(c => !cars.find(car => car.color === c)) || PALETTE[0];
+            setLoanType('standard');
+        }
+
+        buildColorSwatches(selectedColor);
+        document.getElementById('modalOverlay').classList.add('open');
+    }
+
+    function closeModal() {
+        document.getElementById('modalOverlay').classList.remove('open');
+        editingId = null;
+    }
+
+    function handleOverlayClick(e) {
+        if (e.target === document.getElementById('modalOverlay')) closeModal();
+    }
+
+    function saveCar() {
+        const name = document.getElementById('carName').value.trim();
+        const price = parseFloat(document.getElementById('carPrice').value);
+        const downPayment = parseFloat(document.getElementById('carDownPayment').value) || 0;
+        const notes = document.getElementById('carNotes').value.trim();
+
+        if (!name || !price || price <= 0) { alert('Please enter a valid car name and price.'); return; }
+
+        const isNew = document.getElementById('carIsNew').checked;
+        let carData = { name, price, color: selectedColor, notes, downPayment, isNew };
+
+        if (currentLoanType === 'standard') {
+            const apr = parseFloat(document.getElementById('carApr').value);
+            if (isNaN(apr) || apr < 0) { alert('Please enter a valid APR.'); return; }
+            carData.type = 'standard';
+            carData.apr = apr;
+        } else {
+            const apr1 = parseFloat(document.getElementById('carApr1').value);
+            const apr1m = parseInt(document.getElementById('carApr1Months').value);
+            const apr2 = parseFloat(document.getElementById('carApr2').value);
+            if (isNaN(apr1) || isNaN(apr1m) || isNaN(apr2)) { alert('Please fill in all split APR fields.'); return; }
+            carData.type = 'split';
+            carData.apr1 = apr1;
+            carData.apr1_months = apr1m;
+            carData.apr2 = apr2;
+        }
+
+        if (editingId) {
+            const idx = cars.findIndex(c => c.id === editingId);
+            cars[idx] = { ...cars[idx], ...carData };
+        } else {
+            cars.push({ id: nextId++, ...carData });
+        }
+
+        closeModal();
+        renderCarList();
+        calculate();
+    }
+
+    // ── Loan Calculations ────────────────────────────────────────────────────
+    function calcStandardEMI(principal, annualApr, months) {
+        if (principal <= 0) return { emi: 0, totalInterest: 0, totalCost: 0 };
+        if (annualApr === 0) return { emi: principal / months, totalInterest: 0, totalCost: principal };
+        const r = annualApr / 100 / 12;
+        const emi = principal * (r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+        const totalInterest = (emi * months) - principal;
+        return { emi, totalInterest, totalCost: principal + totalInterest };
+    }
+
+    function calcSplitEMI(principal, apr1, months1, apr2, totalMonths) {
+        if (principal <= 0) return { emi: 0, totalInterest: 0, totalCost: 0 };
+        // Phase 1: 0% or low APR — interest only on apr1
+        const r1 = apr1 / 100 / 12;
+        // Estimate remaining balance after phase 1 using standard amortisation
+        let phase1Emi, balanceAtEnd1, interest1;
+        if (apr1 === 0) {
+            const principalPerMonth = principal / totalMonths;
+            balanceAtEnd1 = principal - principalPerMonth * months1;
+            interest1 = 0;
+            phase1Emi = principalPerMonth; // no interest in phase 1
+        } else {
+            const tempEmi = principal * (r1 * Math.pow(1 + r1, totalMonths)) / (Math.pow(1 + r1, totalMonths) - 1);
+            let bal = principal;
+            interest1 = 0;
+            for (let m = 0; m < months1; m++) {
+                const intCharge = bal * r1;
+                interest1 += intCharge;
+                bal = bal - (tempEmi - intCharge);
+            }
+            balanceAtEnd1 = bal;
+            phase1Emi = tempEmi;
+        }
+
+        // Phase 2: standard APR on remaining balance
+        const phase2 = calcStandardEMI(balanceAtEnd1, apr2, totalMonths - months1);
+
+        const totalInterest = interest1 + phase2.totalInterest;
+        const avgEmi = (principal + totalInterest) / totalMonths;
+
+        return {
+            emi: avgEmi,
+            phase1Emi: apr1 === 0 ? (principal / totalMonths) : phase1Emi,
+            phase2Emi: phase2.emi,
+            totalInterest,
+            totalCost: principal + totalInterest,
+            isSplit: true
+        };
+    }
+
+    function fmt(n) {
+        return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(n);
+    }
+
+    // ── Main Calculate ───────────────────────────────────────────────────────
+    function calculate() {
+        const income      = parseFloat(document.getElementById('income').value)      || 0;
+        const savings     = parseFloat(document.getElementById('savings').value)     || 0;
+        const expenses    = parseFloat(document.getElementById('expenses').value)    || 0;
+        const risk        = parseInt(document.getElementById('risk').value);
+        const globalDP    = parseFloat(document.getElementById('downpayment').value) || 0;
+        const term        = parseInt(document.getElementById('term').value);
+        const preferNew   = document.getElementById('preferNew').checked;
+
+        // Show/hide the preference notice
+        document.getElementById('prefNotice').classList.toggle('show', preferNew);
+
+        const discretionary = income - expenses - savings;
+        const maxEMI = discretionary * (risk * 0.2);
+
+        const results = [];
+
+        cars.forEach(car => {
+            const dp = (car.downPayment && car.downPayment > 0) ? car.downPayment : globalDP;
+            const loanAmount = Math.max(0, car.price - dp);
+            let loan;
+
+            if (car.type === 'split') {
+                loan = calcSplitEMI(loanAmount, car.apr1, car.apr1_months, car.apr2, term);
+            } else {
+                loan = calcStandardEMI(loanAmount, car.apr, term);
+            }
+
+            const buffer = discretionary - loan.emi;
+            const affordable = loan.emi <= maxEMI;
+            const over = loan.emi > discretionary;
+
+            results.push({ car, dp, loanAmount, loan, buffer, affordable, over });
+        });
+
+        renderBanner(results, discretionary, maxEMI, preferNew);
+        renderCards(results, discretionary, maxEMI, term, preferNew);
+        renderCharts(results, expenses, savings, income);
+    }
+
+    // ── Decision Banner ──────────────────────────────────────────────────────
+    function renderBanner(results, discretionary, maxEMI) {
+        const banner = document.getElementById('decisionBanner');
+        const affordable = results.filter(r => !r.over && r.affordable);
+        const tight = results.filter(r => !r.over && !r.affordable);
+        const overBudget = results.filter(r => r.over);
+
+        let icon, cls, title, body;
+
+        if (affordable.length === 0 && tight.length === 0) {
+            icon = '🚫'; cls = 'danger';
+            title = 'All options exceed your budget';
+            body = `Your spare budget after expenses &amp; savings is <strong>${fmt(discretionary)}/mo</strong>. Consider a larger down payment, longer term, or a lower-priced car.`;
+        } else if (affordable.length === 0) {
+            icon = '⚠️'; cls = 'warning';
+            title = 'All options exceed your risk tolerance — but some are technically payable';
+            const best = tight.sort((a,b) => a.loan.emi - b.loan.emi)[0];
+            body = `The cheapest monthly payment is <strong>${fmt(best.loan.emi)}/mo</strong> for <strong>${best.car.name}</strong>. Increase your risk tolerance or down payment to unlock safer options.`;
+        } else {
+            const winner = affordable.sort((a,b) => a.loan.totalCost - b.loan.totalCost)[0];
+            const lowestEmi = affordable.sort((a,b) => a.loan.emi - b.loan.emi)[0];
+            icon = '✅'; cls = 'best';
+            title = `Best value pick: ${winner.car.name}`;
+            body = `Lowest total cost of <strong>${fmt(winner.loan.totalCost)}</strong> and within your risk tolerance at <strong>${fmt(winner.loan.emi)}/mo</strong>.`;
+            if (lowestEmi.car.id !== winner.car.id) {
+                body += ` Lowest monthly payment is <strong>${lowestEmi.car.name}</strong> at <strong>${fmt(lowestEmi.loan.emi)}/mo</strong>.`;
+            }
+            if (overBudget.length > 0) {
+                body += ` <strong>${overBudget.map(r => r.car.name).join(', ')}</strong> exceed${overBudget.length === 1 ? 's' : ''} your total spare budget.`;
+            }
+        }
+
+        banner.className = `decision-banner ${cls}`;
+        banner.innerHTML = `<div class="decision-icon">${icon}</div><div class="decision-text"><h3>${title}</h3><p>${body}</p></div>`;
+    }
+
+    // ── Car Cards ────────────────────────────────────────────────────────────
+    function renderCards(results, discretionary, maxEMI, term) {
+        const container = document.getElementById('results');
+        container.innerHTML = '';
+
+        // Determine winner (lowest total cost among affordable)
+        const affordable = results.filter(r => !r.over && r.affordable);
+        const winnerId = affordable.length > 0
+            ? affordable.sort((a,b) => a.loan.totalCost - b.loan.totalCost)[0].car.id
+            : null;
+
+        results.forEach(({ car, dp, loanAmount, loan, buffer, affordable, over }) => {
+            let statusClass = over ? 'over-budget' : !affordable ? 'tight' : 'affordable';
+            let pillClass = over ? 'pill-over' : !affordable ? 'pill-tight' : 'pill-safe';
+            let pillText = over
+                ? `Exceeds spare budget by ${fmt(Math.abs(buffer))}/mo`
+                : !affordable
+                    ? `Exceeds risk tolerance — ${fmt(Math.abs(buffer))}/mo buffer`
+                    : `Within budget — ${fmt(buffer)}/mo buffer`;
+
+            let aprLine = '';
+            if (car.type === 'standard') {
+                aprLine = `<span class="apr-badge">${car.apr}% APR</span>`;
+            } else {
+                aprLine = `<span class="apr-badge">${car.apr1}% for ${car.apr1_months}mo → ${car.apr2}% APR</span>`;
+            }
+
+            let emiBreakdown = '';
+            if (loan.isSplit) {
+                emiBreakdown = `
+                    <div class="metric-row"><span class="metric-label">Phase 1 payment (${car.apr1_months}mo)</span><span class="metric-val">${fmt(loan.phase1Emi)}/mo</span></div>
+                    <div class="metric-row"><span class="metric-label">Phase 2 payment (${term - car.apr1_months}mo)</span><span class="metric-val">${fmt(loan.phase2Emi)}/mo</span></div>
+                    <div class="metric-row"><span class="metric-label">Avg. monthly (blended)</span><span class="metric-val">${fmt(loan.emi)}/mo</span></div>
                 `;
-            });
+            } else {
+                emiBreakdown = `<div class="metric-row emi-row"><span class="metric-label">Monthly payment</span><span class="metric-val">${fmt(loan.emi)}/mo</span></div>`;
+            }
 
-            updateCharts(chartLabels, expenses, savings, chartEmiData, chartBufferData, chartPrincipalData, chartInterestData, income);
-        }
+            const card = document.createElement('div');
+            card.className = `car-card ${statusClass} ${car.id === winnerId ? 'winner' : ''}`;
+            card.innerHTML = `
+                <div class="car-card-header">
+                    <div class="car-color-dot" style="background:${car.color}"></div>
+                    <span class="car-card-title">${car.name}</span>
+                    <span class="winner-badge">BEST VALUE</span>
+                </div>
+                <div class="car-card-body">
 
-        function updateCharts(labels, expenses, savings, emiData, bufferData, principalData, interestData, income) {
-            const ctxCashflow = document.getElementById('cashflowChart').getContext('2d');
-            const ctxCost = document.getElementById('costChart').getContext('2d');
+                    <div class="calc-section-label">Purchase Details</div>
+                    <div class="metric-row"><span class="metric-label">Car price</span><span class="metric-val">${fmt(car.price)}</span></div>
+                    <div class="metric-row"><span class="metric-label">Down payment</span><span class="metric-val">${fmt(dp)}</span></div>
+                    <div class="metric-row total"><span class="metric-label">Loan amount</span><span class="metric-val">${fmt(loanAmount)}</span></div>
 
-            if (cashflowChartInstance) cashflowChartInstance.destroy();
-            if (costChartInstance) costChartInstance.destroy();
+                    <div class="calc-section-label">Loan Terms &amp; APR</div>
+                    <div class="metric-row"><span class="metric-label">Interest rate</span><span class="metric-val">${aprLine}</span></div>
+                    <div class="metric-row"><span class="metric-label">Loan term</span><span class="metric-val">${term} months</span></div>
 
-            // 1. Cashflow Chart
-            cashflowChartInstance = new Chart(ctxCashflow, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        { label: 'Expenses', data: labels.map(() => expenses), backgroundColor: '#94a3b8' },
-                        { label: 'Savings', data: labels.map(() => savings), backgroundColor: '#38bdf8' },
-                        { label: 'Car Payment', data: emiData, backgroundColor: '#f43f5e' },
-                        { label: 'Leftover Buffer', data: bufferData, backgroundColor: '#4ade80' }
-                    ]
+                    <div class="calc-section-label">Monthly Payments</div>
+                    ${emiBreakdown}
+
+                    <div class="calc-section-label">Total Cost</div>
+                    <div class="metric-row"><span class="metric-label">Total interest paid</span><span class="metric-val" style="color:#f59e0b">${fmt(loan.totalInterest)}</span></div>
+                    <div class="metric-row total"><span class="metric-label">Total loan cost</span><span class="metric-val">${fmt(loan.totalCost)}</span></div>
+                    <div class="metric-row"><span class="metric-label">Leftover buffer</span><span class="metric-val" style="color:${buffer >= 0 ? 'var(--success)' : 'var(--danger)'}">${fmt(buffer)}/mo</span></div>
+
+                    ${car.notes ? `<div style="margin-top:0.5rem; font-size:0.8rem; color:var(--text-muted); font-style:italic;">📝 ${car.notes}</div>` : ''}
+                    <div class="status-pill ${pillClass}">${pillText}</div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    // ── Charts ───────────────────────────────────────────────────────────────
+    function renderCharts(results, expenses, savings, income) {
+        const labels = results.map(r => r.car.name);
+        const colors = results.map(r => r.car.color);
+        const emiData = results.map(r => r.loan.emi);
+        const bufferData = results.map(r => Math.max(0, r.buffer));
+        const principalData = results.map(r => r.loanAmount);
+        const interestData = results.map(r => r.loan.totalInterest);
+
+        if (cashflowChart) cashflowChart.destroy();
+        if (costChart) costChart.destroy();
+
+        const cashflowCtx = document.getElementById('cashflowChart').getContext('2d');
+        cashflowChart = new Chart(cashflowCtx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Expenses', data: labels.map(() => expenses), backgroundColor: '#94a3b8' },
+                    { label: 'Savings', data: labels.map(() => savings), backgroundColor: '#38bdf8' },
+                    { label: 'Car Payment', data: emiData, backgroundColor: colors.map(c => c + 'cc') },
+                    { label: 'Leftover Buffer', data: bufferData, backgroundColor: '#4ade8088' }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: { display: true, text: 'Monthly Cashflow Breakdown' },
+                    tooltip: { mode: 'index', intersect: false }
                 },
-                options: {
-                    responsive: true,
-                    plugins: { title: { display: true, text: 'Monthly Cashflow Breakdown' }, tooltip: { mode: 'index', intersect: false } },
-                    scales: { x: { stacked: true }, y: { stacked: true, max: income } }
-                }
-            });
+                scales: { x: { stacked: true }, y: { stacked: true, max: income } }
+            }
+        });
 
-            // 2. Total Cost Chart
-            costChartInstance = new Chart(ctxCost, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        { label: 'Principal (Loan Amt)', data: principalData, backgroundColor: '#60a5fa' },
-                        { label: 'Total Interest', data: interestData, backgroundColor: '#fbbf24' }
-                    ]
+        const costCtx = document.getElementById('costChart').getContext('2d');
+        costChart = new Chart(costCtx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Loan Amount', data: principalData, backgroundColor: colors.map(c => c + 'aa') },
+                    { label: 'Total Interest', data: interestData, backgroundColor: '#fbbf2499' }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: { display: true, text: 'Total Loan Cost (Principal + Interest)' },
+                    tooltip: { mode: 'index', intersect: false }
                 },
-                options: {
-                    responsive: true,
-                    plugins: { title: { display: true, text: 'Total Loan Cost (Principal + Interest)' }, tooltip: { mode: 'index', intersect: false } },
-                    scales: { x: { stacked: true }, y: { stacked: true } }
-                }
-            });
-        }
+                scales: { x: { stacked: true }, y: { stacked: true } }
+            }
+        });
+    }
 
-        window.onload = calculate;
-    </script>
+    // ── Init ─────────────────────────────────────────────────────────────────
+    renderCarList();
+    calculate();
+</script>
 </body>
 </html>
